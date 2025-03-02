@@ -2,8 +2,8 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { TasksStackParamList } from './TasksStackParamList';
 import TasksScreen from '../screens/TasksScreen';
-import AddTaskScreen from '../screens/AddTaskScreen';
-import EditTaskScreen from '../screens/EditTaskScreen';
+import AddTaskScreen from './AddTask';
+import EditTaskScreen from './EditTask';
 
 const Stack = createNativeStackNavigator<TasksStackParamList>();
 
