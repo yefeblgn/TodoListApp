@@ -29,7 +29,7 @@ export const TodoContext = createContext<TodoContextProps>({
   deleteTodo: async () => {},
 });
 
-const API_BASE = 'https://api.owouwu.com/api/';
+const API_BASE = 'https://api.example.com/';
 
 export const TodoProvider = ({ children }: { children: ReactNode }) => {
   const [todos, setTodos] = useState<Todo[]>([]);

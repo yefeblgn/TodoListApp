@@ -15,7 +15,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE = 'https://api.owouwu.com/api/';
+const API_BASE = 'https://api.example.com/';
 
 const AuthForm = () => {
   const [isSignUp, setIsSignUp] = useState(false);

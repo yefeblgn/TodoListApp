@@ -9,7 +9,7 @@ import { getDynamicStyles } from '../utils/themeCheck';
 import styles from '../styles/TasksStyles';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE = 'https://api.owouwu.com/api/';
+const API_BASE = 'api.example.com/';
 
 export type Todo = {
   id: string;
