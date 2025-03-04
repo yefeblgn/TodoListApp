@@ -1,9 +1,27 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { ThemeContext } from '../context/ThemeContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const HomeHeader: React.FC = () => {
   const { currentScheme } = useContext(ThemeContext);
+  const [username, setUsername] = useState<string>('');
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const userData = await AsyncStorage.getItem('user');
+        if (userData) {
+          const user = JSON.parse(userData);
+          setUsername(user.username);
+        }
+      } catch (error) {
+        console.log('Kullanıcı verisi alınamadı', error);
+      }
+    };
+
+    fetchUser();
+  }, []);
 
   const currentHour = new Date().getHours();
   let greeting = '';
@@ -11,6 +29,10 @@ const HomeHeader: React.FC = () => {
   else if (currentHour >= 12 && currentHour < 16) greeting = 'İyi Öğlenler';
   else if (currentHour >= 16 && currentHour < 23) greeting = 'İyi Akşamlar';
   else greeting = 'İyi Geceler';
+
+  if (username) {
+    greeting = `${greeting}, ${username}`;
+  }
 
   const today = new Date();
   const day = today.getDate();

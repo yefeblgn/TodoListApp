@@ -1,7 +1,7 @@
 import React from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 import TodoItemCard from './TodoItemCard';
-import { Todo } from '../context/TodoContext';
+import { Todo } from './TasksContent';
 
 interface TodoListProps {
   todos: Todo[];
@@ -12,13 +12,13 @@ interface TodoListProps {
 
 const TodoList: React.FC<TodoListProps> = ({ todos, onToggle, onEdit, onDelete }) => {
   const sortedTodos = [...todos].sort(
-    (a, b) => a.date.getTime() - b.date.getTime()
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   );
 
   const renderItem = ({ item }: { item: Todo }) => (
     <TodoItemCard 
       todo={item} 
-      onToggle={onToggle} 
+      onToggle={() => onToggle(item.id)} 
       onEdit={() => onEdit(item)} 
       onDelete={() => onDelete(item.id)} 
     />

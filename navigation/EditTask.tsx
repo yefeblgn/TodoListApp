@@ -1,12 +1,12 @@
 import React, { useState, useContext } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  StyleSheet, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  TouchableOpacity,
   Platform,
-  Alert
+  Alert,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { TodoContext, Todo } from '../context/TodoContext';
@@ -23,10 +23,9 @@ const EditTaskScreen: React.FC = () => {
   const { editTodo } = useContext(TodoContext);
   const navigation = useNavigation();
   const { currentScheme } = useContext(ThemeContext);
-
   const [title, setTitle] = useState(todo.title);
   const [description, setDescription] = useState(todo.description || '');
-  const [date, setDate] = useState(todo.date);
+  const [date, setDate] = useState(new Date(todo.date));
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
@@ -63,7 +62,8 @@ const EditTaskScreen: React.FC = () => {
         if (
           date.toDateString() === now.toDateString() &&
           (selectedTime.getHours() < now.getHours() ||
-            (selectedTime.getHours() === now.getHours() && selectedTime.getMinutes() < now.getMinutes()))
+            (selectedTime.getHours() === now.getHours() &&
+              selectedTime.getMinutes() < now.getMinutes()))
         ) {
           Alert.alert('Hata', 'Geçmiş saat seçilemez.');
           return;
@@ -79,13 +79,13 @@ const EditTaskScreen: React.FC = () => {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const now = new Date();
     if (date < now) {
       Alert.alert('Hata', 'Geçmiş tarih ve saat seçilemez.');
       return;
     }
-    editTodo({ ...todo, title, description, date });
+    await editTodo({ ...todo, title, description, date });
     navigation.goBack();
   };
 
@@ -105,7 +105,6 @@ const EditTaskScreen: React.FC = () => {
   return (
     <View style={[styles.container, dynamicStyles.container]}>
       <Text style={[styles.header, dynamicStyles.header]}>Görev Düzenle</Text>
-
       <Text style={[styles.label, dynamicStyles.label]}>Görev Adı</Text>
       <TextInput
         style={[styles.input, dynamicStyles.input]}
@@ -114,7 +113,6 @@ const EditTaskScreen: React.FC = () => {
         placeholder="Görev adını girin"
         placeholderTextColor={currentScheme === 'dark' ? '#aaa' : '#888'}
       />
-
       <Text style={[styles.label, dynamicStyles.label]}>Açıklama (İsteğe bağlı)</Text>
       <TextInput
         style={[styles.input, { height: 80 }, dynamicStyles.input]}
@@ -124,13 +122,11 @@ const EditTaskScreen: React.FC = () => {
         multiline
         placeholderTextColor={currentScheme === 'dark' ? '#aaa' : '#888'}
       />
-
       <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.datePicker}>
         <Text style={[styles.dateText, dynamicStyles.dateText]}>
           Tarih & Saat: {date.toLocaleString()}
         </Text>
       </TouchableOpacity>
-
       {showDatePicker && Platform.OS === 'android' && (
         <DateTimePicker
           value={date}
@@ -140,7 +136,6 @@ const EditTaskScreen: React.FC = () => {
           minimumDate={new Date()}
         />
       )}
-
       {showTimePicker && Platform.OS === 'android' && (
         <DateTimePicker
           value={date}
@@ -149,7 +144,6 @@ const EditTaskScreen: React.FC = () => {
           onChange={onChangeTime}
         />
       )}
-
       {Platform.OS === 'ios' && (
         <DateTimePicker
           value={date}
@@ -161,7 +155,6 @@ const EditTaskScreen: React.FC = () => {
           minimumDate={new Date()}
         />
       )}
-
       <TouchableOpacity style={[styles.saveButton, dynamicStyles.saveButton]} onPress={handleSave}>
         <Text style={[styles.saveButtonText, dynamicStyles.saveButtonText]}>Kaydet</Text>
       </TouchableOpacity>
@@ -172,43 +165,12 @@ const EditTaskScreen: React.FC = () => {
 export default EditTaskScreen;
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    padding: 16, 
-    paddingTop: 60,
-  },
-  header: { 
-    fontSize: 24, 
-    fontWeight: '600', 
-    marginBottom: 24,
-  },
-  label: { 
-    fontSize: 16, 
-    marginVertical: 8,
-  },
-  input: { 
-    borderWidth: 1, 
-    borderRadius: 8, 
-    padding: 12, 
-    fontSize: 16, 
-  },
-  datePicker: { 
-    marginVertical: 16, 
-    padding: 12, 
-    borderWidth: 1, 
-    borderRadius: 8, 
-    borderColor: '#ddd',
-  },
-  dateText: { 
-    fontSize: 16,
-  },
-  saveButton: { 
-    padding: 16, 
-    borderRadius: 8, 
-    alignItems: 'center', 
-    marginTop: 24, 
-  },
-  saveButtonText: { 
-    fontSize: 16,
-  },
+  container: { flex: 1, padding: 16, paddingTop: 60 },
+  header: { fontSize: 24, fontWeight: '600', marginBottom: 24 },
+  label: { fontSize: 16, marginVertical: 8 },
+  input: { borderWidth: 1, borderRadius: 8, padding: 12, fontSize: 16 },
+  datePicker: { marginVertical: 16, padding: 12, borderWidth: 1, borderRadius: 8, borderColor: '#ddd' },
+  dateText: { fontSize: 16 },
+  saveButton: { padding: 16, borderRadius: 8, alignItems: 'center', marginTop: 24 },
+  saveButtonText: { fontSize: 16 },
 });
