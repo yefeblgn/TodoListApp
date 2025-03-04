@@ -3,7 +3,10 @@ node_modules
 .expo
 .DS_Store
 package-lock.json
-.idea
 app.json
 eas.json
 tsconfig.json
+.git
+.idea
+idea
+assets
