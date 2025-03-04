@@ -35,6 +35,20 @@ const styles = StyleSheet.create({
     height: 30, 
     tintColor: '#fff' 
   },
+  refreshIndicator: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  refreshText: {
+    fontSize: 16,
+    color: 'black',
+  },
 });
 
 export default styles;

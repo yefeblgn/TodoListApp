@@ -17,9 +17,11 @@ const AddTaskScreen: React.FC = () => {
   const { addTodo } = useContext(TodoContext);
   const { currentScheme } = useContext(ThemeContext);
   const navigation = useNavigation();
+
+  const initialDate = new Date(new Date().getTime() + 3600000);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [date, setDate] = useState(new Date());
+  const [date, setDate] = useState(initialDate);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
@@ -83,7 +85,7 @@ const AddTaskScreen: React.FC = () => {
       Alert.alert('Hata', 'Geçmiş tarih ve saat seçilemez.');
       return;
     }
-    await addTodo({ title, description, date });
+    await addTodo({ title, description, due_date: date });
     navigation.goBack();
   };
 

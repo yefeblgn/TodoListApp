@@ -69,8 +69,12 @@ const SettingsContent: React.FC = () => {
 
   const handleLogout = async () => {
     await AsyncStorage.removeItem('user');
-    navigation.navigate('Auth');
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Auth' }],
+    });
   };
+  
 
   const handleDeleteAccount = () => {
     Alert.alert(

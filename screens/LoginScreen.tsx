@@ -1,19 +1,29 @@
-import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
+import React, { useContext } from 'react';
+import { View, StyleSheet, SafeAreaView } from 'react-native';
 import AuthForm from '../components/AuthForm';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { AuthParamList } from '../navigation/AuthParamList';
+import { TodoContext } from '../context/TodoContext';
 
 type AuthScreenNavigationProp = StackNavigationProp<AuthParamList, 'Auth'>;
 
-const LoginScreen = () => {
+const LoginScreen: React.FC = () => {
   const navigation = useNavigation<AuthScreenNavigationProp>();
+  const { loadTodos } = useContext(TodoContext);
+
+  const handleAuthSuccess = async () => {
+    await loadTodos();
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'MainScreen' }],
+    });
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <AuthForm />
+        <AuthForm onAuthSuccess={handleAuthSuccess} />
       </View>
     </SafeAreaView>
   );
@@ -29,13 +39,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 30,
     justifyContent: 'center',
-  },
-  header: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 30,
-    textAlign: 'center',
   },
 });
 

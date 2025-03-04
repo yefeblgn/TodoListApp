@@ -17,23 +17,41 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const API_BASE = 'https://api.owouwu.com/api/';
 
-const AuthForm = () => {
+const AuthForm: React.FC<{ onAuthSuccess: () => void }> = ({ onAuthSuccess }) => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const navigation = useNavigation();
+
+  const validateEmail = (email: string): boolean => {
+    const regex = /^\S+@\S+\.\S+$/;
+    return regex.test(email);
+  };
 
   const handleAuth = async () => {
     if (isSignUp) {
       if (!username.trim()) {
-        Alert.alert('Hata', 'Kullanıcı adı boş olamaz');
+        Alert.alert('Hata', 'Kullanıcı adı boş olamaz.');
+        return;
+      }
+      if (username.trim().length < 3 || username.trim().length > 16) {
+        Alert.alert('Hata', 'Kullanıcı adı 3 ile 16 karakter arasında olmalıdır.');
+        return;
+      }
+      if (!validateEmail(email)) {
+        Alert.alert('Hata', 'Geçerli bir e-posta adresi giriniz.');
+        return;
+      }
+      if (password.length < 8 || password.length > 64) {
+        Alert.alert('Hata', 'Şifre 8 ile 64 karakter arasında olmalıdır.');
         return;
       }
       if (password !== confirmPassword) {
-        Alert.alert('Hata', 'Şifreler eşleşmiyor');
+        Alert.alert('Hata', 'Şifreler eşleşmiyor.');
         return;
       }
       setLoading(true);
@@ -46,8 +64,13 @@ const AuthForm = () => {
         const data = await response.json();
         setLoading(false);
         if (response.ok && data.success) {
-          await AsyncStorage.setItem('user', JSON.stringify(data.user || { username, email }));
-          navigation.navigate('Main');
+          const userData = {
+            id: data.user_id,
+            username,
+            email,
+          };
+          await AsyncStorage.setItem('user', JSON.stringify(userData));
+          onAuthSuccess();
         } else {
           Alert.alert('Hata', data.error || 'Kayıt yapılamadı');
         }
@@ -56,6 +79,14 @@ const AuthForm = () => {
         Alert.alert('Hata', 'Bağlantı hatası');
       }
     } else {
+      if (!validateEmail(email)) {
+        Alert.alert('Hata', 'Geçerli bir e-posta adresi giriniz.');
+        return;
+      }
+      if (password.length < 8 || password.length > 64) {
+        Alert.alert('Hata', 'Şifre 8 ile 64 karakter arasında olmalıdır.');
+        return;
+      }
       setLoading(true);
       try {
         const response = await fetch(API_BASE + 'userlogin', {
@@ -66,8 +97,13 @@ const AuthForm = () => {
         const data = await response.json();
         setLoading(false);
         if (response.ok && data.success) {
-          await AsyncStorage.setItem('user', JSON.stringify(data.user));
-          navigation.navigate('Main');
+          const userData = {
+            id: data.user.id,
+            username: data.user.username,
+            email: data.user.email,
+          };
+          await AsyncStorage.setItem('user', JSON.stringify(userData));
+          onAuthSuccess();
         } else {
           Alert.alert('Hata', data.error || 'Giriş yapılamadı');
         }
@@ -106,19 +142,34 @@ const AuthForm = () => {
             keyboardType="email-address"
             autoCapitalize="none"
           />
-          <TextInput
-            placeholder="Şifre"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            style={styles.input}
-          />
+          <View style={styles.passwordWrapper}>
+            <TextInput
+              placeholder="Şifre"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!passwordVisible}
+              style={[styles.input, styles.passwordInput]}
+            />
+            <TouchableOpacity
+              style={styles.eyeButton}
+              onPress={() => setPasswordVisible(prev => !prev)}
+            >
+              <Image
+                source={
+                  passwordVisible
+                    ? require('../assets/eye-on.png')
+                    : require('../assets/eye-off.png')
+                }
+                style={styles.eyeIcon}
+              />
+            </TouchableOpacity>
+          </View>
           {isSignUp && (
             <TextInput
               placeholder="Şifreyi Onayla"
               value={confirmPassword}
               onChangeText={setConfirmPassword}
-              secureTextEntry
+              secureTextEntry={!passwordVisible}
               style={styles.input}
             />
           )}
@@ -185,6 +236,24 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     fontSize: 16,
     backgroundColor: '#f9f9f9',
+  },
+  passwordWrapper: {
+    width: '100%',
+    position: 'relative',
+    justifyContent: 'center',
+  },
+  passwordInput: {
+    paddingRight: 50,
+  },
+  eyeButton: {
+    position: 'absolute',
+    right: 16,
+    padding: 4,
+  },
+  eyeIcon: {
+    width: 24,
+    height: 24,
+    tintColor: '#007BFF',
   },
   button: {
     backgroundColor: '#007BFF',

@@ -25,7 +25,7 @@ const EditTaskScreen: React.FC = () => {
   const { currentScheme } = useContext(ThemeContext);
   const [title, setTitle] = useState(todo.title);
   const [description, setDescription] = useState(todo.description || '');
-  const [date, setDate] = useState(new Date(todo.date));
+  const [date, setDate] = useState(new Date(todo.due_date));
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
@@ -85,7 +85,8 @@ const EditTaskScreen: React.FC = () => {
       Alert.alert('Hata', 'Geçmiş tarih ve saat seçilemez.');
       return;
     }
-    await editTodo({ ...todo, title, description, date });
+
+    await editTodo({ ...todo, title, description, due_date: date });
     navigation.goBack();
   };
 

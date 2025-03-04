@@ -7,7 +7,7 @@ export interface Todo {
   user_id: string;
   title: string;
   description?: string;
-  date: Date;
+  due_date?: Date;
   is_completed: boolean;
 }
 
@@ -31,27 +31,46 @@ export const TodoContext = createContext<TodoContextProps>({
 
 const API_BASE = 'https://api.owouwu.com/api/';
 
+const getUserId = async (): Promise<string | null> => {
+  try {
+    const userData = await AsyncStorage.getItem('user');
+    if (userData) {
+      const user = JSON.parse(userData);
+      console.log("Retrieved user from AsyncStorage:", user);
+      return user.id || null;
+    } else {
+      console.log("No user data found in AsyncStorage");
+    }
+  } catch (error) {
+    console.log("Kullanıcı verisi alınamadı", error);
+  }
+  return null;
+};
+
 export const TodoProvider = ({ children }: { children: ReactNode }) => {
   const [todos, setTodos] = useState<Todo[]>([]);
 
   const loadTodos = async () => {
     try {
-      const userData = await AsyncStorage.getItem('user');
-      if (userData) {
-        const user = JSON.parse(userData);
-        const response = await fetch(API_BASE + 'list-todo', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user_id: user.id }),
-        });
-        const data = await response.json();
-        if (response.ok && data.success) {
-          const loadedTodos: Todo[] = data.todos.map((t: any) => ({
-            ...t,
-            date: t.date ? new Date(t.date) : new Date(),
-          }));
-          setTodos(loadedTodos);
-        }
+      const userId = await getUserId();
+      if (!userId) {
+        console.log('Kullanıcı ID bulunamadı.');
+        return;
+      }
+      const response = await fetch(API_BASE + 'list-todo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId }),
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        const loadedTodos: Todo[] = data.todos.map((t: any) => ({
+          ...t,
+          due_date: t.due_date ? new Date(t.due_date) : undefined,
+        }));
+        setTodos(loadedTodos);
+      } else {
+        console.log('List Todo API error: ', data.error);
       }
     } catch (error) {
       console.log('Todo yükleme hatası:', error);
@@ -64,7 +83,7 @@ export const TodoProvider = ({ children }: { children: ReactNode }) => {
 
   const scheduleNotification = async (todo: Todo) => {
     const now = new Date();
-    if (todo.date > now) {
+    if (todo.due_date && todo.due_date > now) {
       try {
         await Notifications.scheduleNotificationAsync({
           content: {
@@ -72,7 +91,7 @@ export const TodoProvider = ({ children }: { children: ReactNode }) => {
             body: todo.title,
             sound: 'default',
           },
-          trigger: todo.date,
+          trigger: todo.due_date,
         });
       } catch (error) {
         console.log('Bildirim planlama hatası:', error);
@@ -82,32 +101,34 @@ export const TodoProvider = ({ children }: { children: ReactNode }) => {
 
   const addTodo = async (newTodo: Omit<Todo, 'id' | 'is_completed'>) => {
     try {
-      const userData = await AsyncStorage.getItem('user');
-      if (userData) {
-        const user = JSON.parse(userData);
-        const response = await fetch(API_BASE + 'add-todo', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user_id: user.id,
-            title: newTodo.title,
-            description: newTodo.description,
-            date: newTodo.date.toISOString(),
-          }),
-        });
-        const data = await response.json();
-        if (response.ok && data.success) {
-          const addedTodo: Todo = {
-            id: data.todo_id.toString(),
-            user_id: user.id,
-            title: newTodo.title,
-            description: newTodo.description,
-            date: newTodo.date,
-            is_completed: false,
-          };
-          setTodos(prev => [...prev, addedTodo]);
-          scheduleNotification(addedTodo);
-        }
+      const userId = await getUserId();
+      if (!userId) {
+        console.log('Kullanıcı ID bulunamadı, todo eklenemedi.');
+        return;
+      }
+      const dueDate = new Date();
+      const response = await fetch(API_BASE + 'add-todo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: userId,
+          title: newTodo.title,
+          description: newTodo.description,
+          date: dueDate.toISOString(),
+        }),
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        const addedTodo: Todo = {
+          id: data.todo_id.toString(),
+          user_id: userId,
+          title: newTodo.title,
+          description: newTodo.description,
+          due_date: dueDate,
+          is_completed: false,
+        };
+        setTodos(prev => [...prev, addedTodo]);
+        scheduleNotification(addedTodo);
       }
     } catch (error) {
       console.log('Todo ekleme hatası:', error);
@@ -116,29 +137,31 @@ export const TodoProvider = ({ children }: { children: ReactNode }) => {
 
   const editTodo = async (updatedTodo: Todo) => {
     try {
-      const userData = await AsyncStorage.getItem('user');
-      if (userData) {
-        const user = JSON.parse(userData);
-        const response = await fetch(API_BASE + 'edit-todo', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            id: updatedTodo.id,
-            user_id: user.id,
-            title: updatedTodo.title,
-            description: updatedTodo.description,
-            is_completed: updatedTodo.is_completed,
-          }),
-        });
-        const data = await response.json();
-        if (response.ok && data.success) {
-          setTodos(prev =>
-            prev.map(todo =>
-              todo.id === updatedTodo.id ? updatedTodo : todo
-            )
-          );
-          scheduleNotification(updatedTodo);
-        }
+      const userId = await getUserId();
+      if (!userId) {
+        console.log('Kullanıcı ID bulunamadı, todo düzenlenemedi.');
+        return;
+      }
+      const response = await fetch(API_BASE + 'edit-todo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: updatedTodo.id,
+          user_id: userId,
+          title: updatedTodo.title,
+          description: updatedTodo.description,
+          is_completed: updatedTodo.is_completed,
+          date: updatedTodo.due_date ? updatedTodo.due_date.toISOString() : null,
+        }),
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setTodos(prev =>
+          prev.map(todo =>
+            todo.id === updatedTodo.id ? updatedTodo : todo
+          )
+        );
+        scheduleNotification(updatedTodo);
       }
     } catch (error) {
       console.log('Todo düzenleme hatası:', error);
@@ -147,26 +170,27 @@ export const TodoProvider = ({ children }: { children: ReactNode }) => {
 
   const toggleTodo = async (id: string, currentStatus: boolean) => {
     try {
-      const userData = await AsyncStorage.getItem('user');
-      if (userData) {
-        const user = JSON.parse(userData);
-        const response = await fetch(API_BASE + 'edit-todo', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            id,
-            user_id: user.id,
-            is_completed: !currentStatus,
-          }),
-        });
-        const data = await response.json();
-        if (response.ok && data.success) {
-          setTodos(prev =>
-            prev.map(todo =>
-              todo.id === id ? { ...todo, is_completed: !todo.is_completed } : todo
-            )
-          );
-        }
+      const userId = await getUserId();
+      if (!userId) {
+        console.log('Kullanıcı ID bulunamadı, todo toggle yapılamadı.');
+        return;
+      }
+      const response = await fetch(API_BASE + 'edit-todo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id,
+          user_id: userId,
+          is_completed: !currentStatus,
+        }),
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setTodos(prev =>
+          prev.map(todo =>
+            todo.id === id ? { ...todo, is_completed: !todo.is_completed } : todo
+          )
+        );
       }
     } catch (error) {
       console.log('Todo toggle hatası:', error);

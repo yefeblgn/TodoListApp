@@ -11,21 +11,50 @@ interface TodoItemCardProps {
   onToggle: (id: string) => void;
 }
 
-const ACTION_WIDTH = 75;
+const ACTION_WIDTH = 80;
 
 const TodoItemCard: React.FC<TodoItemCardProps> = ({ todo, onDelete, onEdit, onToggle }) => {
   const { currentScheme } = useContext(ThemeContext);
   const now = new Date();
-  const isOverdue = now >= todo.date;
+  // Using due_date instead of date
+  const isOverdue = now >= todo.due_date;
+
+  // Tarihi istenen formata çevirmek için yardımcı fonksiyon
+  const formatDate = (date: Date): string => {
+    const day = date.getDate();
+    const monthIndex = date.getMonth();
+    const year = date.getFullYear();
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    const monthNames = [
+      'Ocak',
+      'Şubat',
+      'Mart',
+      'Nisan',
+      'Mayıs',
+      'Haziran',
+      'Temmuz',
+      'Ağustos',
+      'Eylül',
+      'Ekim',
+      'Kasım',
+      'Aralık',
+    ];
+    const monthName = monthNames[monthIndex];
+    const formattedHours = hours.toString().padStart(2, '0');
+    const formattedMinutes = minutes.toString().padStart(2, '0');
+    return `${day} ${monthName}, ${year} - Saat ${formattedHours}:${formattedMinutes}`;
+  };
+
   const renderLeftActions = (progress: Animated.AnimatedInterpolation, dragX: Animated.AnimatedInterpolation) => {
     const scale = dragX.interpolate({
-      inputRange: [0, 50],
+      inputRange: [0, ACTION_WIDTH],
       outputRange: [0, 1],
       extrapolate: 'clamp',
     });
     const translateX = dragX.interpolate({
-      inputRange: [0, 50],
-      outputRange: [-10, 0],
+      inputRange: [0, ACTION_WIDTH],
+      outputRange: [-20, 0],
       extrapolate: 'clamp',
     });
     return (
@@ -44,13 +73,13 @@ const TodoItemCard: React.FC<TodoItemCardProps> = ({ todo, onDelete, onEdit, onT
 
   const renderRightActions = (progress: Animated.AnimatedInterpolation, dragX: Animated.AnimatedInterpolation) => {
     const scale = dragX.interpolate({
-      inputRange: [-50, 0],
+      inputRange: [-ACTION_WIDTH, 0],
       outputRange: [1, 0],
       extrapolate: 'clamp',
     });
     const translateX = dragX.interpolate({
-      inputRange: [-50, 0],
-      outputRange: [0, 10],
+      inputRange: [-ACTION_WIDTH, 0],
+      outputRange: [0, 20],
       extrapolate: 'clamp',
     });
     return (
@@ -77,21 +106,36 @@ const TodoItemCard: React.FC<TodoItemCardProps> = ({ todo, onDelete, onEdit, onT
       <TouchableOpacity
         onPress={() => !isOverdue && onToggle(todo.id)}
         activeOpacity={0.8}
-        disabled={isOverdue}>
+        disabled={isOverdue}
+      >
         <View style={[styles.card, currentScheme === 'dark' && styles.cardDark]}>
           <View style={styles.textContainer}>
-            <Text style={[styles.title, currentScheme === 'dark' && styles.titleDark, todo.completed && styles.completed]}>
+            <Text style={[
+              styles.title,
+              currentScheme === 'dark' && styles.titleDark,
+              todo.is_completed && styles.completed
+            ]}>
               {todo.title}
             </Text>
-            <Text style={[styles.date, currentScheme === 'dark' && styles.dateDark]}>
-              {todo.date.toLocaleString()}
+            {todo.description ? (
+              <Text style={[
+                styles.description,
+                currentScheme === 'dark' && styles.descriptionDark
+              ]}>
+                {todo.description}
+              </Text>
+            ) : null}
+            <Text style={[
+              styles.date,
+              currentScheme === 'dark' && styles.dateDark
+            ]}>
+              {todo.due_date ? formatDate(new Date(todo.due_date)) : 'Tarih yok'}
             </Text>
           </View>
-          {}
           <View style={styles.statusIndicator}>
             {isOverdue ? (
               <Image source={require('../assets/red_x.png')} style={styles.statusIcon} />
-            ) : todo.completed ? (
+            ) : todo.is_completed ? (
               <Image source={require('../assets/tick.png')} style={styles.statusIcon} />
             ) : (
               <View style={styles.emptyIndicator} />
@@ -113,14 +157,14 @@ const styles = StyleSheet.create({
   childrenContainer: {},
   card: {
     flexDirection: 'row',
-    borderRadius: 8,
+    borderRadius: 10,
     padding: 16,
-    elevation: 2,
+    elevation: 3,
     backgroundColor: '#fff',
     alignItems: 'center',
   },
   cardDark: {
-    backgroundColor: '#333',
+    backgroundColor: '#444',
   },
   textContainer: {
     flex: 1,
@@ -137,6 +181,14 @@ const styles = StyleSheet.create({
     textDecorationLine: 'line-through',
     opacity: 0.6,
   },
+  description: {
+    fontSize: 14,
+    color: '#555',
+    marginBottom: 4,
+  },
+  descriptionDark: {
+    color: '#ccc',
+  },
   date: {
     fontSize: 13,
     color: '#888',
@@ -148,19 +200,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     height: '100%',
-    borderRadius: 8,
+    borderRadius: 10,
   },
   actionIcon: {
-    width: 24,
-    height: 24,
+    width: 26,
+    height: 26,
     tintColor: '#fff',
   },
   statusIndicator: {
-    width: 28,
-    height: 28,
+    width: 30,
+    height: 30,
     borderWidth: 1,
     borderColor: '#007AFF',
-    borderRadius: 4,
+    borderRadius: 6,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 12,
