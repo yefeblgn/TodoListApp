@@ -6,7 +6,7 @@ const app = express();
 app.use(bodyParser.json());
 
 const pool = mysql.createPool({
-  host: 'host',
+  host: 'host', // localhost
   user: 'user',
   password: 'password',
   database: 'database',
