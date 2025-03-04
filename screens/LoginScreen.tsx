@@ -16,7 +16,7 @@ const LoginScreen: React.FC = () => {
     await loadTodos();
     navigation.reset({
       index: 0,
-      routes: [{ name: 'MainScreen' }],
+      routes: [{ name: 'Main' }],
     });
   };
 

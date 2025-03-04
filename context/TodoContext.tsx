@@ -106,7 +106,7 @@ export const TodoProvider = ({ children }: { children: ReactNode }) => {
         console.log('Kullanıcı ID bulunamadı, todo eklenemedi.');
         return;
       }
-      const dueDate = new Date();
+      const dueDate = newTodo.due_date || new Date();
       const response = await fetch(API_BASE + 'add-todo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -134,6 +134,7 @@ export const TodoProvider = ({ children }: { children: ReactNode }) => {
       console.log('Todo ekleme hatası:', error);
     }
   };
+  
 
   const editTodo = async (updatedTodo: Todo) => {
     try {
