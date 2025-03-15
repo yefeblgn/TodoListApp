@@ -1,176 +1,230 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import {
   View,
   Text,
   TextInput,
-  StyleSheet,
   TouchableOpacity,
-  Platform,
   Alert,
+  Switch,
+  StyleSheet,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { TodoContext, Todo } from '../context/TodoContext';
+import { TodoContext, Todo, AlarmSettings } from '../context/TodoContext';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { ThemeContext } from '../context/ThemeContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as DocumentPicker from 'expo-document-picker';
 
-type ParamList = {
-  EditTask: { todo: Todo };
-};
+type EditTaskRouteProp = RouteProp<{ EditTask: { todo: Todo } }, 'EditTask'>;
 
 const EditTaskScreen: React.FC = () => {
-  const route = useRoute<RouteProp<ParamList, 'EditTask'>>();
-  const { todo } = route.params;
+  const { params: { todo } } = useRoute<EditTaskRouteProp>();
   const { editTodo } = useContext(TodoContext);
   const navigation = useNavigation();
-  const { currentScheme } = useContext(ThemeContext);
+
   const [title, setTitle] = useState(todo.title);
   const [description, setDescription] = useState(todo.description || '');
   const [date, setDate] = useState(new Date(todo.date));
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
-  const onChangeDate = (event: any, selectedDate?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowDatePicker(false);
-      if (selectedDate) {
-        const now = new Date();
-        const selected = new Date(selectedDate);
-        selected.setHours(0, 0, 0, 0);
-        const today = new Date(now);
-        today.setHours(0, 0, 0, 0);
-        if (selected < today) {
-          Alert.alert('Hata', 'Geçmiş tarih seçilemez.');
-          return;
-        }
-        setDate(prev => {
-          const newDate = new Date(selectedDate);
-          newDate.setHours(prev.getHours(), prev.getMinutes());
-          return newDate;
-        });
-      }
-      setShowTimePicker(true);
-    } else {
-      if (selectedDate) setDate(selectedDate);
-    }
-  };
+  const [alarmEnabled, setAlarmEnabled] = useState(false);
+  const [alarmSound, setAlarmSound] = useState('Default Samsung');
+  const [snoozeCount, setSnoozeCount] = useState(3);
 
-  const onChangeTime = (event: any, selectedTime?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowTimePicker(false);
-      if (selectedTime) {
-        const now = new Date();
-        if (
-          date.toDateString() === now.toDateString() &&
-          (selectedTime.getHours() < now.getHours() ||
-            (selectedTime.getHours() === now.getHours() &&
-              selectedTime.getMinutes() < now.getMinutes()))
-        ) {
-          Alert.alert('Hata', 'Geçmiş saat seçilemez.');
-          return;
-        }
-        setDate(prev => {
-          const newDate = new Date(prev);
-          newDate.setHours(selectedTime.getHours(), selectedTime.getMinutes());
-          return newDate;
-        });
+  useEffect(() => {
+    const loadAlarmSettings = async () => {
+      const stored = await AsyncStorage.getItem(`alarm_${todo.id}`);
+      if (stored) {
+        const alarm: AlarmSettings = JSON.parse(stored);
+        setAlarmEnabled(alarm.enabled);
+        setAlarmSound(alarm.alarmSound || 'Default Samsung');
+        setSnoozeCount(alarm.snoozeCount);
       }
-    } else {
-      if (selectedTime) setDate(selectedTime);
+    };
+    loadAlarmSettings();
+  }, [todo.id]);
+
+  const pickAlarmSound = async () => {
+    const result = await DocumentPicker.getDocumentAsync({ type: 'audio/*' });
+    if (!result.canceled) {
+      setAlarmSound(result.assets[0].uri);
     }
   };
 
   const handleSave = async () => {
-    const now = new Date();
-    if (date < now) {
+    if (!title.trim()) {
+      Alert.alert('Hata', 'Görev adı boş olamaz.');
+      return;
+    }
+
+    if (date < new Date()) {
       Alert.alert('Hata', 'Geçmiş tarih ve saat seçilemez.');
       return;
     }
-    await editTodo({ ...todo, title, description, date });
-    navigation.goBack();
-  };
 
-  const dynamicStyles = {
-    container: { backgroundColor: currentScheme === 'dark' ? '#222' : '#fff' },
-    header: { color: currentScheme === 'dark' ? '#fff' : '#333' },
-    label: { color: currentScheme === 'dark' ? '#fff' : '#333' },
-    input: {
-      borderColor: currentScheme === 'dark' ? '#555' : '#ddd',
-      color: currentScheme === 'dark' ? '#fff' : '#333',
-    },
-    dateText: { color: currentScheme === 'dark' ? '#fff' : '#333' },
-    saveButton: { backgroundColor: '#007AFF' },
-    saveButtonText: { color: '#fff' },
+    const alarmSettings: AlarmSettings = alarmEnabled
+      ? { enabled: true, alarmSound, snoozeCount }
+      : { enabled: false };
+
+    try {
+      await editTodo({
+        id: todo.id,
+        user_id: todo.user_id,
+        title,
+        description,
+        date,
+        is_completed: todo.is_completed,
+        alarmSettings,
+      });
+
+      await AsyncStorage.setItem(
+        `alarm_${todo.id}`,
+        JSON.stringify(alarmSettings)
+      );
+
+      Alert.alert('Başarılı', 'Görev başarıyla güncellendi.');
+      navigation.goBack();
+    } catch {
+      Alert.alert('Hata', 'Görev güncellenirken hata oluştu.');
+    }
   };
 
   return (
-    <View style={[styles.container, dynamicStyles.container]}>
-      <Text style={[styles.header, dynamicStyles.header]}>Görev Düzenle</Text>
-      <Text style={[styles.label, dynamicStyles.label]}>Görev Adı</Text>
+    <View style={styles.container}>
+      <Text style={styles.label}>Görev Adı:</Text>
       <TextInput
-        style={[styles.input, dynamicStyles.input]}
+        style={styles.input}
         value={title}
         onChangeText={setTitle}
-        placeholder="Görev adını girin"
-        placeholderTextColor={currentScheme === 'dark' ? '#aaa' : '#888'}
+        placeholder="Görev adı"
       />
-      <Text style={[styles.label, dynamicStyles.label]}>Açıklama (İsteğe bağlı)</Text>
+
+      <Text style={styles.label}>Açıklama:</Text>
       <TextInput
-        style={[styles.input, { height: 80 }, dynamicStyles.input]}
+        style={[styles.input, styles.multiline]}
         value={description}
         onChangeText={setDescription}
-        placeholder="Görev açıklaması"
+        placeholder="Açıklama"
         multiline
-        placeholderTextColor={currentScheme === 'dark' ? '#aaa' : '#888'}
       />
-      <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.datePicker}>
-        <Text style={[styles.dateText, dynamicStyles.dateText]}>
-          Tarih & Saat: {date.toLocaleString()}
-        </Text>
+
+      <TouchableOpacity onPress={() => setShowDatePicker(true)}>
+        <Text style={styles.dateText}>Tarih & Saat: {date.toLocaleString()}</Text>
       </TouchableOpacity>
-      {showDatePicker && Platform.OS === 'android' && (
+
+      {showDatePicker && (
         <DateTimePicker
           value={date}
           mode="date"
-          display="default"
-          onChange={onChangeDate}
           minimumDate={new Date()}
+          onChange={(event, selectedDate) => {
+            setShowDatePicker(false);
+            if (selectedDate) {
+              setDate(selectedDate);
+              setShowTimePicker(true);
+            }
+          }}
         />
       )}
-      {showTimePicker && Platform.OS === 'android' && (
+
+      {showTimePicker && (
         <DateTimePicker
           value={date}
           mode="time"
-          display="default"
-          onChange={onChangeTime}
-        />
-      )}
-      {Platform.OS === 'ios' && (
-        <DateTimePicker
-          value={date}
-          mode="datetime"
-          display="default"
-          onChange={(event, selectedDate) => {
-            if (selectedDate) setDate(selectedDate);
+          onChange={(event, selectedTime) => {
+            setShowTimePicker(false);
+            if (selectedTime)
+              setDate(
+                prev =>
+                  new Date(
+                    prev.setHours(selectedTime.getHours(), selectedTime.getMinutes())
+                  )
+              );
           }}
-          minimumDate={new Date()}
         />
       )}
-      <TouchableOpacity style={[styles.saveButton, dynamicStyles.saveButton]} onPress={handleSave}>
-        <Text style={[styles.saveButtonText, dynamicStyles.saveButtonText]}>Kaydet</Text>
+
+      <View style={styles.alarmToggle}>
+        <Switch value={alarmEnabled} onValueChange={setAlarmEnabled} />
+        <Text style={styles.alarmToggleText}>Alarm'ı Etkinleştir</Text>
+      </View>
+
+      {alarmEnabled && (
+        <>
+          <TouchableOpacity onPress={pickAlarmSound}>
+            <Text style={styles.alarmText}>Alarm Sesi: {alarmSound}</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.label}>Ertelenme Sayısı:</Text>
+          <TextInput
+            style={styles.input}
+            value={String(snoozeCount)}
+            onChangeText={text => setSnoozeCount(Number(text))}
+            keyboardType="numeric"
+            placeholder="Kaç kez ertelensin?"
+          />
+        </>
+      )}
+
+      <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+        <Text style={styles.saveButtonText}>Kaydet</Text>
       </TouchableOpacity>
     </View>
   );
 };
 
-export default EditTaskScreen;
-
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, paddingTop: 60 },
-  header: { fontSize: 24, fontWeight: '600', marginBottom: 24 },
-  label: { fontSize: 16, marginVertical: 8 },
-  input: { borderWidth: 1, borderRadius: 8, padding: 12, fontSize: 16 },
-  datePicker: { marginVertical: 16, padding: 12, borderWidth: 1, borderRadius: 8, borderColor: '#ddd' },
-  dateText: { fontSize: 16 },
-  saveButton: { padding: 16, borderRadius: 8, alignItems: 'center', marginTop: 24 },
-  saveButtonText: { fontSize: 16 },
+  container: {
+    flex: 1,
+    padding: 16,
+    paddingTop: 60,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginVertical: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 10,
+    fontSize: 16,
+  },
+  multiline: {
+    height: 80,
+    textAlignVertical: 'top',
+  },
+  dateText: {
+    marginVertical: 16,
+    fontSize: 16,
+  },
+  alarmToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 12,
+  },
+  alarmToggleText: {
+    fontSize: 16,
+    marginLeft: 8,
+  },
+  alarmText: {
+    fontSize: 16,
+    marginVertical: 8,
+    color: '#007AFF',
+  },
+  saveButton: {
+    backgroundColor: '#007AFF',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });
+
+export default EditTaskScreen;

@@ -1,18 +1,30 @@
-import React from 'react';
-import { StyleSheet, View, ActivityIndicator } from 'react-native';
+import React, { useRef } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { Video } from 'expo-av';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const IntroScreen = () => {
+const IntroScreen: React.FC = () => {
   const navigation = useNavigation();
+  const hasNavigated = useRef(false);
 
   const handleVideoEnd = async () => {
+    if (hasNavigated.current) return;
+    hasNavigated.current = true;
     const userData = await AsyncStorage.getItem('user');
     if (userData) {
       navigation.navigate('Main');
     } else {
       navigation.navigate('Auth');
+    }
+  };
+
+  const onPlaybackStatusUpdate = (status: any) => {
+    if (status.positionMillis >= 3200 && !status.didJustFinish) {
+      handleVideoEnd();
+    }
+    if (status.didJustFinish) {
+      handleVideoEnd();
     }
   };
 
@@ -23,13 +35,8 @@ const IntroScreen = () => {
         style={styles.video}
         resizeMode="cover"
         shouldPlay
-        onPlaybackStatusUpdate={(status) => {
-          if (status.didJustFinish) {
-            handleVideoEnd();
-          }
-        }}
+        onPlaybackStatusUpdate={onPlaybackStatusUpdate}
       />
-      <ActivityIndicator style={styles.loader} size="large" color="#007BFF" />
     </View>
   );
 };
@@ -45,9 +52,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: '100%',
     height: '100%',
-  },
-  loader: {
-    position: 'absolute',
   },
 });
 

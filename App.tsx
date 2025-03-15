@@ -1,5 +1,5 @@
 import 'react-native-gesture-handler';
-import React, { useContext } from 'react';
+import React from 'react';
 import { Image } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
@@ -13,17 +13,20 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 import HomeScreen from './screens/HomeScreen';
 import TasksStackNavigator from './navigation/TasksStackNavigator';
-import SettingsScreen from './screens/SettingsScreen';
+import ProfileScreen from './screens/ProfileScreen';
 import IntroScreen from './screens/IntroScreen';
 import LoginScreen from './screens/LoginScreen';
+import HistoryScreen from './screens/HistoryScreen';
+import SettingsScreen from './screens/SettingsScreen';
+
 import { TodoProvider } from './context/TodoContext';
+import { UserProvider } from './context/UserContext';
 import { ThemeProvider, ThemeContext } from './context/ThemeContext';
 
 const Tab = createBottomTabNavigator();
 const RootStack = createStackNavigator();
 
-const MainTabs: React.FC = () => {
-  const { currentScheme } = useContext(ThemeContext);
+const MainTabs: React.FC<{ currentScheme: 'light' | 'dark' }> = ({ currentScheme }) => {
   return (
     <Tab.Navigator
       initialRouteName="Home"
@@ -41,6 +44,8 @@ const MainTabs: React.FC = () => {
             source = require('./assets/menu.png');
           } else if (route.name === 'TasksStack') {
             source = require('./assets/missions.png');
+          } else if (route.name === 'Profile') {
+            source = require('./assets/profile.png');
           } else if (route.name === 'Settings') {
             source = require('./assets/settings.png');
           }
@@ -65,13 +70,13 @@ const MainTabs: React.FC = () => {
     >
       <Tab.Screen name="TasksStack" component={TasksStackNavigator} />
       <Tab.Screen name="Home" component={HomeScreen} />
+      <Tab.Screen name="Profile" component={ProfileScreen} />
       <Tab.Screen name="Settings" component={SettingsScreen} />
     </Tab.Navigator>
   );
 };
 
-const AppNavigatorContainer: React.FC = () => {
-  const { currentScheme } = useContext(ThemeContext);
+const AppNavigatorContainer: React.FC<{ currentScheme: 'light' | 'dark' }> = ({ currentScheme }) => {
   const navigationTheme: NavigationTheme =
     currentScheme === 'dark' ? DarkTheme : DefaultTheme;
 
@@ -80,7 +85,11 @@ const AppNavigatorContainer: React.FC = () => {
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
         <RootStack.Screen name="Intro" component={IntroScreen} />
         <RootStack.Screen name="Auth" component={LoginScreen} />
-        <RootStack.Screen name="Main" component={MainTabs} />
+        <RootStack.Screen name="Main">
+          {() => <MainTabs currentScheme={currentScheme} />}
+        </RootStack.Screen>
+        <RootStack.Screen name="History" component={HistoryScreen} />
+        <RootStack.Screen name="Settings" component={SettingsScreen} />
       </RootStack.Navigator>
     </NavigationContainer>
   );
@@ -90,9 +99,13 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider>
-        <TodoProvider>
-          <AppNavigatorContainer />
-        </TodoProvider>
+        <UserProvider>
+          <TodoProvider>
+            <ThemeContext.Consumer>
+              {({ currentScheme }) => <AppNavigatorContainer currentScheme={currentScheme} />}
+            </ThemeContext.Consumer>
+          </TodoProvider>
+        </UserProvider>
       </ThemeProvider>
     </GestureHandlerRootView>
   );

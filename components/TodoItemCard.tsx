@@ -1,40 +1,43 @@
 import React, { useContext } from 'react';
 import { View, Text, StyleSheet, Animated, TouchableOpacity, Image } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
-import { Todo } from '../context/TodoContext';
+import { Todo, TodoContext } from '../context/TodoContext';
 import { ThemeContext } from '../context/ThemeContext';
 
 interface TodoItemCardProps {
   todo: Todo;
-  onDelete: (id: string) => void;
+  onDelete: (id: number) => void;
   onEdit: (todo: Todo) => void;
-  onToggle: (id: string) => void;
 }
 
-const ACTION_WIDTH = 75;
+const ACTION_WIDTH = 80;
 
-const TodoItemCard: React.FC<TodoItemCardProps> = ({ todo, onDelete, onEdit, onToggle }) => {
+const TodoItemCard: React.FC<TodoItemCardProps> = ({ todo, onDelete, onEdit }) => {
   const { currentScheme } = useContext(ThemeContext);
+  const { toggleTodo } = useContext(TodoContext);
+
   const now = new Date();
-  const isOverdue = now >= todo.date;
-  const renderLeftActions = (progress: Animated.AnimatedInterpolation, dragX: Animated.AnimatedInterpolation) => {
+  const isOverdue = todo.due_date ? new Date(todo.due_date) < now : false;
+  const formattedDate = todo.due_date ? new Date(todo.due_date).toLocaleString() : 'Tarih belirtilmedi';
+
+  const renderLeftActions = (
+    progress: Animated.AnimatedInterpolation,
+    dragX: Animated.AnimatedInterpolation
+  ) => {
     const scale = dragX.interpolate({
       inputRange: [0, 50],
       outputRange: [0, 1],
       extrapolate: 'clamp',
     });
-    const translateX = dragX.interpolate({
-      inputRange: [0, 50],
-      outputRange: [-10, 0],
-      extrapolate: 'clamp',
-    });
     return (
       !isOverdue && (
         <TouchableOpacity onPress={() => onEdit(todo)} activeOpacity={0.8}>
-          <Animated.View style={[styles.actionContainer, { backgroundColor: '#007AFF', width: ACTION_WIDTH }]}>
+          <Animated.View
+            style={[styles.actionContainer, { backgroundColor: '#007AFF', width: ACTION_WIDTH }]}
+          >
             <Animated.Image
               source={require('../assets/edit.png')}
-              style={[styles.actionIcon, { transform: [{ scale }, { translateX }] }]}
+              style={[styles.actionIcon, { transform: [{ scale }] }]}
             />
           </Animated.View>
         </TouchableOpacity>
@@ -42,15 +45,13 @@ const TodoItemCard: React.FC<TodoItemCardProps> = ({ todo, onDelete, onEdit, onT
     );
   };
 
-  const renderRightActions = (progress: Animated.AnimatedInterpolation, dragX: Animated.AnimatedInterpolation) => {
+  const renderRightActions = (
+    progress: Animated.AnimatedInterpolation,
+    dragX: Animated.AnimatedInterpolation
+  ) => {
     const scale = dragX.interpolate({
       inputRange: [-50, 0],
       outputRange: [1, 0],
-      extrapolate: 'clamp',
-    });
-    const translateX = dragX.interpolate({
-      inputRange: [-50, 0],
-      outputRange: [0, 10],
       extrapolate: 'clamp',
     });
     return (
@@ -58,7 +59,7 @@ const TodoItemCard: React.FC<TodoItemCardProps> = ({ todo, onDelete, onEdit, onT
         <Animated.View style={[styles.actionContainer, { backgroundColor: '#FF3B30', width: ACTION_WIDTH }]}>
           <Animated.Image
             source={require('../assets/trash.png')}
-            style={[styles.actionIcon, { transform: [{ scale }, { translateX }] }]}
+            style={[styles.actionIcon, { transform: [{ scale }] }]}
           />
         </Animated.View>
       </TouchableOpacity>
@@ -66,36 +67,44 @@ const TodoItemCard: React.FC<TodoItemCardProps> = ({ todo, onDelete, onEdit, onT
   };
 
   return (
-    <Swipeable
-      renderLeftActions={renderLeftActions}
-      renderRightActions={renderRightActions}
-      onSwipeableLeftOpen={() => { if (!isOverdue) onEdit(todo); }}
-      onSwipeableRightOpen={() => onDelete(todo.id)}
-      containerStyle={styles.swipeContainer}
-      childrenContainerStyle={styles.childrenContainer}
-    >
+    <Swipeable renderLeftActions={renderLeftActions} renderRightActions={renderRightActions}>
       <TouchableOpacity
-        onPress={() => !isOverdue && onToggle(todo.id)}
+        onPress={() => {
+          if (!isOverdue && todo.id !== undefined) {
+            toggleTodo(todo.id, !todo.is_completed);
+          }
+        }}
         activeOpacity={0.8}
-        disabled={isOverdue}>
+        disabled={isOverdue}
+      >
         <View style={[styles.card, currentScheme === 'dark' && styles.cardDark]}>
           <View style={styles.textContainer}>
-            <Text style={[styles.title, currentScheme === 'dark' && styles.titleDark, todo.completed && styles.completed]}>
+            <Text style={[
+              styles.title,
+              currentScheme === 'dark' && styles.titleDark,
+              todo.is_completed && styles.completed
+            ]}>
               {todo.title}
             </Text>
+            {todo.description && (
+              <Text style={[styles.description, currentScheme === 'dark' && styles.dateDark]}>
+                {todo.description}
+              </Text>
+            )}
             <Text style={[styles.date, currentScheme === 'dark' && styles.dateDark]}>
-              {todo.date.toLocaleString()}
+              {formattedDate}
             </Text>
           </View>
-          {}
-          <View style={styles.statusIndicator}>
-            {isOverdue ? (
-              <Image source={require('../assets/red_x.png')} style={styles.statusIcon} />
-            ) : todo.completed ? (
-              <Image source={require('../assets/tick.png')} style={styles.statusIcon} />
-            ) : (
-              <View style={styles.emptyIndicator} />
-            )}
+          <View style={styles.statusIndicatorContainer}>
+            <View style={[styles.statusIndicator, isOverdue && styles.overdueIndicator]}>
+              {isOverdue ? (
+                <Image source={require('../assets/red_x.png')} style={styles.statusIcon} />
+              ) : todo.is_completed ? (
+                <Image source={require('../assets/tick.png')} style={styles.statusIcon} />
+              ) : (
+                <View style={styles.emptyIndicator} />
+              )}
+            </View>
           </View>
         </View>
       </TouchableOpacity>
@@ -103,14 +112,7 @@ const TodoItemCard: React.FC<TodoItemCardProps> = ({ todo, onDelete, onEdit, onT
   );
 };
 
-export default TodoItemCard;
-
 const styles = StyleSheet.create({
-  swipeContainer: {
-    marginHorizontal: 16,
-    marginVertical: 8,
-  },
-  childrenContainer: {},
   card: {
     flexDirection: 'row',
     borderRadius: 8,
@@ -118,6 +120,8 @@ const styles = StyleSheet.create({
     elevation: 2,
     backgroundColor: '#fff',
     alignItems: 'center',
+    marginVertical: 8,
+    marginHorizontal: 16,
   },
   cardDark: {
     backgroundColor: '#333',
@@ -130,12 +134,16 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 4,
   },
-  titleDark: {
-    color: '#fff',
-  },
   completed: {
     textDecorationLine: 'line-through',
     opacity: 0.6,
+  },
+  titleDark: {
+    color: '#fff',
+  },
+  description: {
+    fontSize: 13,
+    color: '#666',
   },
   date: {
     fontSize: 13,
@@ -155,22 +163,34 @@ const styles = StyleSheet.create({
     height: 24,
     tintColor: '#fff',
   },
+  statusIndicatorContainer: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   statusIndicator: {
-    width: 28,
-    height: 28,
-    borderWidth: 1,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2,
     borderColor: '#007AFF',
-    borderRadius: 4,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 12,
+    backgroundColor: '#fff',
   },
-  emptyIndicator: {
-    width: 20,
-    height: 20,
+  overdueIndicator: {
+    borderColor: '#FF3B30',
   },
   statusIcon: {
     width: 20,
     height: 20,
+    tintColor: '#007AFF',
   },
+  emptyIndicator: {
+    width: 20,
+    height: 20,
+  }
 });
+
+export default TodoItemCard;

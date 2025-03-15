@@ -14,8 +14,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const API_BASE = 'https://api.example.com/';
+import { UserAPI } from '../utils/process';
 
 const AuthForm = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -32,48 +31,54 @@ const AuthForm = () => {
         Alert.alert('Hata', 'Kullanıcı adı boş olamaz');
         return;
       }
+      if (!email.trim()) {
+        Alert.alert('Hata', 'E-posta boş olamaz');
+        return;
+      }
       if (password !== confirmPassword) {
         Alert.alert('Hata', 'Şifreler eşleşmiyor');
         return;
       }
+
       setLoading(true);
       try {
-        const response = await fetch(API_BASE + 'newuser', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, email, password }),
-        });
-        const data = await response.json();
-        setLoading(false);
-        if (response.ok && data.success) {
-          await AsyncStorage.setItem('user', JSON.stringify(data.user || { username, email }));
-          navigation.navigate('Main');
-        } else {
-          Alert.alert('Hata', data.error || 'Kayıt yapılamadı');
+        const data = await UserAPI.registerUser(username, email, password);
+
+        if (!data.success || !data.user_id) {
+          throw new Error(data.error || 'Kullanıcı kaydedilemedi.');
         }
+
+        const user = { id: data.user_id, username, email };
+        await AsyncStorage.setItem('user', JSON.stringify(user));
+
+        setLoading(false);
+        navigation.navigate('Main');
       } catch (error) {
         setLoading(false);
-        Alert.alert('Hata', 'Bağlantı hatası');
+        Alert.alert('Hata', error.message || 'Kayıt yapılamadı.');
       }
     } else {
+      if (!email.trim() || !password.trim()) {
+        Alert.alert('Hata', 'E-posta ve şifre boş olamaz');
+        return;
+      }
+
       setLoading(true);
       try {
-        const response = await fetch(API_BASE + 'userlogin', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
-        });
-        const data = await response.json();
-        setLoading(false);
-        if (response.ok && data.success) {
-          await AsyncStorage.setItem('user', JSON.stringify(data.user));
-          navigation.navigate('Main');
-        } else {
-          Alert.alert('Hata', data.error || 'Giriş yapılamadı');
+        const data = await UserAPI.loginUser(email, password);
+
+        if (!data.success || !data.user_id) {
+          throw new Error('Giriş başarısız, kullanıcı bilgisi alınamadı.');
         }
+
+        const user = { id: data.user_id, email };
+        await AsyncStorage.setItem('user', JSON.stringify(user));
+
+        setLoading(false);
+        navigation.navigate('Main');
       } catch (error) {
         setLoading(false);
-        Alert.alert('Hata', 'Bağlantı hatası');
+        Alert.alert('Hata', error.message || 'Giriş yapılamadı.');
       }
     }
   };

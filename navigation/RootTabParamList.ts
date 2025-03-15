@@ -4,5 +4,7 @@ export type RootTabParamList = {
     Settings: undefined;
     IntroScreen: undefined;
     LoginScreen: undefined;
+    History: undefined;
+    Profile: undefined;
   };
   

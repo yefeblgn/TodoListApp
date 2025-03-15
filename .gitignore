@@ -1,12 +1,6 @@
-android
 node_modules
-.expo
-.DS_Store
-package-lock.json
-app.json
-eas.json
-tsconfig.json
-.git
+android
 .idea
-idea
-assets
+expo
+package-lock.json
+eas.json

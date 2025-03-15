@@ -18,7 +18,7 @@ import { ThemeContext, ThemeMode } from '../context/ThemeContext';
 import { getDynamicStyles } from '../utils/themeCheck';
 import styles from '../styles/SettingsStyles';
 
-const API_BASE = 'https://api.example.com/';
+const API_BASE = 'https://api.owouwu.com/';
 
 const SettingsContent: React.FC = () => {
   const { theme, setTheme, currentScheme } = useContext(ThemeContext);

@@ -1,7 +1,7 @@
 {
   "name": "TodoApp",
   "author": "yefeblgn",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "main": "node_modules/expo/AppEntry.js",
   "scripts": {
     "start": "expo start",
@@ -19,6 +19,8 @@
     "bundletool": "^1.1.7",
     "expo": "^52.0.37",
     "expo-av": "^15.0.2",
+    "expo-document-picker": "^13.0.3",
+    "expo-image-picker": "^16.0.6",
     "expo-notifications": "~0.29.13",
     "react": "18.3.1",
     "react-native": "0.76.7",
